@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>30 Particles System - AI</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 1px solid #555; pointer-events: none; z-index: 10; }
+        #shapeName { font-size: 1.2em; font-weight: bold; color: #00ffcc; margin-bottom: 5px; }
+        .gesture-hint { font-size: 0.85em; color: #ddd; margin-top: 5px; }
+        #footer { margin-top: 15px; padding-top: 10px; border-top: 1px solid #555; font-size: 0.8em; color: #aaa; pointer-events: auto; } /* تفعيل التفاعل للأقدام */
+        #footer a { color: #ff99cc; text-decoration: none; font-weight: bold; }
+        #footer a:hover { text-decoration: underline; }
+        canvas { display: block; }
+        video { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div id="shapeName">0: Hand Follow</div>
+        <div class="gesture-hint">👍 Thumbs Up: Next Shape</div>
+        <div class="gesture-hint">👎 Thumbs Down: Previous Shape</div>
+        <div class="gesture-hint">👌 Pinch: Random Explosion</div>
+        <div id="footer">
+            Made with love by <a href="https://www.instagram.com/zein.ebessefi? " target="_blank">Zeineb Essefi</a>
+        </div>
+    </div>
+    <video id="webcam" autoplay playsinline></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        camera.position.z = 18;
+
+        const count = 10000; 
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+
+        for(let i=0; i<count; i++) {
+            positions[i*3] = (Math.random()-0.5)*50;
+            positions[i*3+1] = (Math.random()-0.5)*50;
+            positions[i*3+2] = (Math.random()-0.5)*50;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        
+        const mat = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true });
+        const points = new THREE.Points(geometry, mat);
+        scene.add(points);
+
+        const shapeNames = [
+            "Hand Follow", "Heart", "Saturn", "DNA", "Tornado", "Galaxy", "Sphere", "Cube", 
+            "Trefoil Knot", "Mobius Strip", "Waves", "Star", "Atom", "Black Hole", 
+            "Rain", "Fountain", "Cylinder", "Cone", "Spiral", "Rose", 
+            "Wheel", "Crown", "Hourglass", "Diamond", "Double Helix", 
+            "Tunnel", "Pulse", "Fire", "Fireworks", "Chaos"
+        ];
+
+        const getShape = (index, i, time) => {
+            const u = (i / count) * Math.PI * 2;
+            const v = (i % 100) / 100 * Math.PI * 2;
+            const t = i / count;
+            
+            let x=0, y=0, z=0, r=1, g=1, b=1;
+
+            switch(index) {
+                case 1: // Heart
+                    x = 16 * Math.pow(Math.sin(u), 3) * 0.25;
+                    y = (13 * Math.cos(u) - 5 * Math.cos(2*u) - 2 * Math.cos(3*u) - Math.cos(4*u)) * 0.25;
+                    z = (Math.random() - 0.5) * 2;
+                    r=1; g=0.2; b=0.4; break;
+                case 2: // Saturn
+                    if(t < 0.5) { x=4*Math.sin(u)*Math.cos(v); y=4*Math.sin(u)*Math.sin(v); z=4*Math.cos(u); }
+                    else { const rad = 6+Math.random()*3; x=rad*Math.cos(u); y=rad*Math.sin(u)*0.2; z=rad*Math.sin(u); }
+                    r=0.9; g=0.8; b=0.4; break;
+                case 3: // DNA
+                    x = 3 * Math.cos(u*10 + time); y = t*20 - 10; z = 3 * Math.sin(u*10 + time);
+                    r=0.2; g=0.8; b=1; break;
+                case 4: // Tornado
+                    const tr = (t*20)*0.3; x = tr*Math.cos(u*20+time*5); y = t*20-10; z = tr*Math.sin(u*20+time*5);
+                    r=0.1; g=0.9; b=0.7; break;
+                case 5: // Galaxy
+                    const gr = t*10; const gth = gr*2 - time; x = gr*Math.cos(gth); y = (Math.random()-0.5); z = gr*Math.sin(gth);
+                    r=0.9; g=0.3; b=0.8; break;
+                case 6: // Sphere
+                    x = 5*Math.sin(u)*Math.cos(v); y = 5*Math.sin(u)*Math.sin(v); z = 5*Math.cos(u);
+                    r=0.4; g=0.6; b=1; break;
+                case 7: // Cube
+                    x = (Math.random()-0.5)*10; y = (Math.random()-0.5)*10; z = (Math.random()-0.5)*10;
+                    r=0.5; g=1; b=0.5; break;
+                case 8: // Trefoil Knot
+                    x = Math.sin(u) + 2*Math.sin(2*u); y = Math.cos(u) - 2*Math.cos(2*u); z = -Math.sin(3*u);
+                    x*=1.5; y*=1.5; z*=1.5; r=1; g=0.5; b=0.2; break;
+                case 9: // Mobius
+                    const mr = 1 + (v/Math.PI - 1)/2 * Math.cos(u/2);
+                    x = 5*mr*Math.cos(u); y = 5*mr*Math.sin(u); z = 5*(v/Math.PI - 1)/2 * Math.sin(u/2);
+                    r=0.8; g=0.2; b=1; break;
+                case 10: // Wave
+                    x = (t-0.5)*20; z = (v/(Math.PI*2)-0.5)*20; y = Math.sin(x*0.5+time)*2 + Math.cos(z*0.5+time)*2;
+                    r=0.1; g=0.5; b=1; break;
+                case 11: // Star
+                    const sr = (i%2===0? 8 : 3) * Math.random(); x = sr*Math.cos(u); y = sr*Math.sin(u); z = (Math.random()-0.5);
+                    r=1; g=1; b=0; break;
+                case 12: // Atom
+                    if(t < 0.1) { x=Math.random()*2; y=Math.random()*2; z=Math.random()*2; r=1;g=0;b=0; }
+                    else { const ar=6; const a = u*3+time*2; x=ar*Math.cos(a); y=ar*Math.sin(a)*Math.cos(v); z=ar*Math.sin(a)*Math.sin(v); r=0;g=1;b=1;} break;
+                case 13: // Black hole
+                    const br = Math.random()*15; const bth = br*5 + time*5; 
+                    x = br*Math.cos(bth); z = br*Math.sin(bth); y = -10/(br+0.1); r=br/15; g=0; b=1-br/15; break;
+                case 14: // Rain
+                    x=(Math.random()-0.5)*20; z=(Math.random()-0.5)*20; y= 10 - ((t*100+time*10)%20); r=0.5;g=0.7;b=1; break;
+                case 15: // Fountain
+                    const fr= (time*5 + t*10)%10; x=fr*Math.cos(u); z=fr*Math.sin(u); y= -5 + fr*2 - (fr*fr)*0.2; r=0.2;g=0.8;b=1; break;
+                case 16: // Cylinder
+                    x=5*Math.cos(u); z=5*Math.sin(u); y=(Math.random()-0.5)*15; r=1;g=0.5;b=0; break;
+                case 17: // Cone
+                    const cr=(1-t)*5; x=cr*Math.cos(u); z=cr*Math.sin(u); y=(t-0.5)*15; r=0;g=1;b=0.5; break;
+                case 18: // Spiral
+                    x=t*10*Math.cos(u*10+time); z=t*10*Math.sin(u*10+time); y=(t-0.5)*15; r=1;g=0;b=1; break;
+                case 19: // Rose
+                    const rr=6*Math.sin(4*u); x=rr*Math.cos(u); y=rr*Math.sin(u); z=(Math.random()-0.5)*2; r=1;g=0.2;b=0.3; break;
+                case 20: // Wheel
+                    x=6*Math.cos(u); y=6*Math.sin(u); z=(Math.random()-0.5)*2; if(i%10===0){x*=Math.random(); y*=Math.random();} r=0.8;g=0.8;b=0.8; break;
+                case 21: // Crown
+                    x=5*Math.cos(u); z=5*Math.sin(u); y=2*Math.sin(5*u); r=1;g=0.8;b=0; break;
+                case 22: // Hourglass
+                    const hr=Math.abs(t-0.5)*10; x=hr*Math.cos(u*20); z=hr*Math.sin(u*20); y=(t-0.5)*15; r=0.4;g=0.9;b=1; break;
+                case 23: // Diamond
+                    x=(1-Math.abs(t-0.5)*2)*5*Math.cos(u*4); z=(1-Math.abs(t-0.5)*2)*5*Math.sin(u*4); y=(t-0.5)*10; r=0.8;g=1;b=1; break;
+                case 24: // Double DNA
+                    x=3*Math.cos(u*10+time); y=t*20-10; z=3*Math.sin(u*10+time); if(i%2===0){x=-x; z=-z; r=1;g=0.2;b=0.2;} else {r=0.2;g=0.5;b=1;} break;
+                case 25: // Tunnel
+                    const tur= 2+Math.random()*2; x=tur*Math.cos(u+time); y=tur*Math.sin(u+time); z=(t-0.5)*40; r=0;g=t;b=1-t; break;
+                case 26: // Pulse
+                    const pr= 5 + Math.sin(time*5)*2; x=pr*Math.sin(u)*Math.cos(v); y=pr*Math.sin(u)*Math.sin(v); z=pr*Math.cos(u); r=1;g=0;b=Math.abs(Math.sin(time)); break;
+                case 27: // Fire
+                    x=(Math.random()-0.5)*t*5; z=(Math.random()-0.5)*t*5; y=(t*10) - 5 + Math.random(); r=1; g=1-t; b=0; break;
+                case 28: // Fireworks
+                    const fwr= (time*10)%15; x=fwr*Math.sin(u)*Math.cos(v); y=fwr*Math.sin(u)*Math.sin(v) - (fwr*fwr*0.05); z=fwr*Math.cos(u); r=Math.random();g=Math.random();b=Math.random(); break;
+                case 29: // Chaos
+                    x=(Math.random()-0.5)*20; y=(Math.random()-0.5)*20; z=(Math.random()-0.5)*20; r=Math.random();g=Math.random();b=Math.random(); break;
+                default: 
+                    x = (Math.random()-0.5)*5; y = (Math.random()-0.5)*5; z = (Math.random()-0.5)*5; r=0.3; g=0.6; b=1; break;
+            }
+            return {x, y, z, r, g, b};
+        };
+
+        let currentShapeIndex = 0;
+        let handPos = { x: 0, y: 0 };
+        const uiName = document.getElementById('shapeName');
+        const video = document.getElementById('webcam');
+        let globalTime = 0;
+        let isExploding = false;
+        let lastGestureTime = 0;
+
+        const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7 });
+
+        hands.onResults((res) => {
+            if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
+                const lm = res.multiHandLandmarks[0];
+                handPos.x = (0.5 - lm[8].x) * 30;
+                handPos.y = (0.5 - lm[8].y) * 20;
+
+                const pinch = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+                const isThumbUp = lm[4].y < lm[3].y && lm[8].y > lm[5].y && lm[12].y > lm[9].y && lm[16].y > lm[13].y;
+                const isThumbDown = lm[4].y > lm[3].y && lm[8].y < lm[5].y && lm[12].y < lm[9].y && lm[16].y < lm[13].y;
+
+                const now = Date.now();
+                isExploding = (pinch < 0.04);
+
+                if (now - lastGestureTime > 1000) { 
+                    if (isThumbUp) {
+                        currentShapeIndex = (currentShapeIndex + 1) % 30;
+                        lastGestureTime = now;
+                    } else if (isThumbDown) {
+                        currentShapeIndex = (currentShapeIndex - 1 + 30) % 30;
+                        lastGestureTime = now;
+                    }
+                    uiName.innerText = `${currentShapeIndex}: ${shapeNames[currentShapeIndex]}`;
+                }
+            }
+        });
+
+        const cam = new Camera(video, {
+            onFrame: async () => await hands.send({ image: video }),
+            width: 640, height: 480
+        });
+        cam.start();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            globalTime += 0.03;
+            
+            const pos = geometry.attributes.position.array;
+            const col = geometry.attributes.color.array;
+
+            for(let i=0; i<count; i++) {
+                const i3 = i * 3;
+                let tx, ty, tz, r, g, b;
+
+                if (isExploding) {
+                    tx = pos[i3] + (Math.random()-0.5) * 3;
+                    ty = pos[i3+1] + (Math.random()-0.5) * 3;
+                    tz = pos[i3+2] + (Math.random()-0.5) * 3;
+                    r = Math.random(); g = Math.random(); b = Math.random();
+                } else if (currentShapeIndex === 0) {
+                    tx = handPos.x + (Math.random()-0.5) * 5;
+                    ty = handPos.y + (Math.random()-0.5) * 5;
+                    tz = (Math.random()-0.5) * 5;
+                    r = 0.2; g = 0.6; b = 1;
+                } else {
+                    const target = getShape(currentShapeIndex, i, globalTime);
+                    tx = target.x + handPos.x; 
+                    ty = target.y + handPos.y; 
+                    tz = target.z;
+                    r = target.r; g = target.g; b = target.b;
+                }
+
+                pos[i3] += (tx - pos[i3]) * 0.05;
+                pos[i3+1] += (ty - pos[i3+1]) * 0.05;
+                pos[i3+2] += (tz - pos[i3+2]) * 0.05;
+                col[i3] += (r - col[i3]) * 0.1;
+                col[i3+1] += (g - col[i3+1]) * 0.1;
+                col[i3+2] += (b - col[i3+2]) * 0.1;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+            
+            camera.position.x = Math.sin(globalTime * 0.2) * 5;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
